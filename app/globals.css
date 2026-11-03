@@ -1,6 +1,8 @@
 
 .global-generate-link { position: fixed; z-index: 20; right: 20px; bottom: 18px; padding: 11px 15px; border: 1px solid #53633a; border-radius: 999px; background: #c4f06b; color: #171b0d; box-shadow: 0 8px 28px #0008; font-size: 12px; font-weight: 700; }
 .global-generate-link:hover { background: #d3ff7b; transform: translateY(-1px); }
+.global-edit-link { position: fixed; z-index: 20; right: 20px; bottom: 60px; padding: 10px 14px; border: 1px solid #4a3d6e; border-radius: 999px; background: #8b5cf6; color: #fff; box-shadow: 0 8px 28px #0008; font-size: 11px; font-weight: 600; text-decoration: none; }
+.global-edit-link:hover { background: #a78bfa; transform: translateY(-1px); }
 .generate-page { width: min(940px, 100%); min-height: 100vh; margin: auto; padding: 30px 22px 70px; }
 .back-link { display: inline-block; margin-bottom: 22px; color: var(--accent); font-size: 12px; }
 .generate-header { margin-bottom: 20px; }

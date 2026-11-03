@@ -12,6 +12,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         {children}
         <a className="global-generate-link" href="/generate">▶ 生成视频</a>
+        <a className="global-edit-link" href="/edit">✧ 成片预览</a>
       </body>
     </html>
   );
