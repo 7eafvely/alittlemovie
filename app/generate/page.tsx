@@ -131,12 +131,13 @@ export default function GeneratePage() {
     setGeneratingChar(char.id);
     try {
       const basePrompt = char.fullPrompt || `${char.name}：${char.description}`;
-      // Build a clean guofeng (国漫) character sheet prompt
-      const prompt = `${basePrompt}\n现代精致国漫角色设定图，电影级2.5D动画质感，精致写实动漫比例，细腻五官与发丝，真实服装面料，柔和均匀的影棚光，中性浅灰纯色背景，全身立绘，9:16竖构图。负面：多余手指，五官扭曲，比例失调，Q版，卡通，真人实拍，塑料皮肤，磨皮滤镜，网红脸，品牌标识，文字，水印，复杂背景。`;
+      // Build a high-quality guofeng (国漫) character sheet prompt
+      // Style reference: modern Chinese animation / gacha game character art
+      const prompt = `${basePrompt}\n大师级作品，最佳画质，超高细节，现代国漫风格，精致游戏角色立绘，写实与动漫完美融合，电影级光影，细腻皮肤质感，清晰瞳孔高光，柔顺发丝细节，精致服装纹理，立体五官，8k分辨率，超精细，专业级角色概念设计，全身立绘，正面朝向，中性浅灰纯色背景，9:16竖构图。`;
       const response = await fetch('/api/generate-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-alittlemovie-access-code': accessCode.trim() },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt, width: 768, height: 1024 }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || '图片生成失败');
