@@ -10,6 +10,7 @@ function hasAccess(request: Request) {
 
 // 通义万相（阿里云百炼）文生图端点
 const DASHSCOPE_URL = 'https://dashscope.aliyuncs.com/api/v1/services/aigc/text2image/image-synthesis';
+const DASHSCOPE_TASK_URL = 'https://dashscope.aliyuncs.com/api/v1/tasks';
 
 export async function POST(request: Request) {
   if (!hasAccess(request)) {
@@ -36,38 +37,44 @@ async function generateWithWanx(request: Request, apiKey: string) {
     const size = body.width && body.height ? `${body.width}*${body.height}` : '768*1024';
 
     const payload = {
-      model: 'wanx2.1-t2i-plus',
+      model: 'wanx2.1-t2i-turbo',
       input: { prompt },
       parameters: {
         size,
         n: 1,
         prompt_extend: true,
         watermark: false,
-        negative_prompt: '低质量，模糊，畸形，多余手指，五官扭曲，比例失调，Q版，卡通，真人实拍，塑料皮肤，磨皮滤镜，网红脸，文字，水印，logo，复杂背景',
       },
     };
 
-    const response = await fetch(DASHSCOPE_URL, {
+    // 异步调用：先提交任务拿到 task_id
+    const submitRes = await fetch(DASHSCOPE_URL, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
-        'X-DashScope-Async': 'disable',
+        'X-DashScope-Async': 'enable',
       },
       body: JSON.stringify(payload),
       cache: 'no-store',
     });
 
-    const data = await response.json();
+    const submitData = await submitRes.json();
 
-    if (!response.ok) {
-      const msg = data?.message || data?.code || '通义万相生成失败';
+    if (!submitRes.ok) {
+      const msg = submitData?.message || submitData?.code || '通义万相提交失败';
       return NextResponse.json({ error: msg }, { status: 502 });
     }
 
-    const imageUrl = data?.output?.results?.[0]?.url;
+    const taskId = submitData?.output?.task_id;
+    if (!taskId) {
+      return NextResponse.json({ error: '通义万相未返回任务 ID。' }, { status: 502 });
+    }
+
+    // 轮询任务状态（最多等 90 秒）
+    const imageUrl = await pollTask(DASHSCOPE_TASK_URL, taskId, apiKey);
     if (!imageUrl) {
-      return NextResponse.json({ error: '通义万相未返回图片。' }, { status: 502 });
+      return NextResponse.json({ error: '通义万相生成超时或失败。' }, { status: 502 });
     }
 
     return NextResponse.json({ imageUrl });
@@ -77,10 +84,38 @@ async function generateWithWanx(request: Request, apiKey: string) {
   }
 }
 
+async function pollTask(url: string, taskId: string, apiKey: string): Promise<string | null> {
+  const maxAttempts = 30;
+  const intervalMs = 3000;
+
+  for (let i = 0; i < maxAttempts; i++) {
+    const statusRes = await fetch(`${url}/${taskId}`, {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+      cache: 'no-store',
+    });
+
+    const statusData = await statusRes.json();
+    const status = statusData?.output?.task_status;
+
+    if (status === 'SUCCEEDED') {
+      return statusData?.output?.results?.[0]?.url || null;
+    }
+    if (status === 'FAILED' || status === 'CANCELED') {
+      return null;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+
+  return null;
+}
+
 async function generateWithMiniMax(request: Request) {
   const apiKey = process.env.MINIMAX_API_KEY;
   if (!apiKey) {
-    return NextResponse.json({ error: '未配置任何图片生成服务的 API Key（DASHSCOPE_API_KEY 或 MINIMAX_API_KEY）。' }, { status: 500 });
+    return NextResponse.json({ error: '未配置任何图片生成服务的 API Key。' }, { status: 500 });
   }
 
   try {
