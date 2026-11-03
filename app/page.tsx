@@ -57,6 +57,34 @@ export default function Home() {
     })); markChanged();
   };
 
+  const importDirectorManual = async (file: File) => {
+    setIsLoading(true); setNotice('');
+    try {
+      const text = await file.text();
+      const response = await fetch('/api/parse-director-manual', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ markdown: text }) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || '导演手册解析失败。');
+      const episodes = data.summary?.episodeTitle || '';
+      setProjectName(episodes || file.name.replace(/\.(md|MD)$/, ''));
+      setScenes((data.scenes ?? []).map((scene: Scene) => ({
+        ...scene,
+        shots: scene.shots.map((shot: any) => ({
+          id: shot.id || `shot-${Math.random().toString(36).slice(2, 9)}`,
+          title: shot.title || '镜头',
+          description: shot.description || '',
+          duration: shot.duration || 5,
+          status: 'draft' as const,
+          makeVideo: false,
+          storyboardPrompt: shot.storyboardPrompt,
+          videoPrompt: shot.videoPrompt,
+        })),
+      })));
+      markChanged();
+      setNotice(`已导入「${episodes}」：${data.summary?.totalShots || 0} 个镜头，总时长约 ${data.summary?.totalDuration || 0} 秒。`);
+    } catch (error) { setNotice(error instanceof Error ? error.message : '导入失败。'); }
+    finally { setIsLoading(false); }
+  };
+
   const parseScript = async () => {
     setIsLoading(true); setNotice('');
     try {
@@ -119,7 +147,7 @@ export default function Home() {
         <section className="project-bar panel"><div className="project-icon">▶</div><label className="project-name-label">项目名称<input value={projectName} onChange={(event) => { setProjectName(event.target.value); markChanged(); }} aria-label="项目名称" /></label><div className="project-stats"><span><b>{scenes.length}</b> 场景</span><i /><span><b>{shotCount}</b> 镜头</span><i /><span><b>{totalDuration}</b> 秒故事板</span></div><span className={`save-state ${saved ? 'is-saved' : ''}`}>{saved ? '● 已保存' : '○ 未保存'}</span></section>
 
         <div className="content-grid">
-          <section className="panel script-panel" id="script"><div className="panel-heading"><div><span className="step">01</span><div><h2>你的剧本</h2><p>按空行或场景标题拆分段落</p></div></div><span className="ai-tag">免费 · 规则拆分</span></div><textarea value={script} onChange={(event) => { setScript(event.target.value); markChanged(); }} rows={15} maxLength={50000} placeholder="在这里粘贴你的故事梗概或剧本……" aria-label="剧本内容" /><div className="editor-footer"><span>{script.length.toLocaleString()} / 50,000 字符</span><button className="primary-btn" onClick={parseScript} disabled={isLoading || !script.trim()}>{isLoading ? <><span className="spinner" /> 正在拆解…</> : '✦ 拆解成分镜'}</button></div><div className="tip"><span>✦</span><p><b>省预算原则：</b>先审核分镜和提示词，不满意先改文案，不要直接反复生成视频。</p></div></section>
+          <section className="panel script-panel" id="script"><div className="panel-heading"><div><span className="step">01</span><div><h2>你的剧本</h2><p>按空行或场景标题拆分段落</p></div></div><span className="ai-tag">免费 · 规则拆分</span></div><textarea value={script} onChange={(event) => { setScript(event.target.value); markChanged(); }} rows={15} maxLength={50000} placeholder="在这里粘贴你的故事梗概或剧本……" aria-label="剧本内容" /><div className="editor-footer"><span>{script.length.toLocaleString()} / 50,000 字符</span><div style={{display:'flex',gap:8}}><label className="secondary-btn" style={{cursor:'pointer',padding:'10px 16px',display:'inline-flex',alignItems:'center',fontSize:12}}>📋 导入导演手册<input type="file" accept=".md,.MD" style={{display:'none'}} onChange={(e)=>{const f=e.target.files?.[0];if(f)importDirectorManual(f);e.target.value=''}} /></label><button className="primary-btn" onClick={parseScript} disabled={isLoading || !script.trim()}>{isLoading ? <><span className="spinner" /> 正在拆解…</> : '✦ 拆解成分镜'}</button></div></div><div className="tip"><span>✦</span><p><b>省预算原则：</b>先审核分镜和提示词，不满意先改文案，不要直接反复生成视频。</p></div></section>
 
           <section className="panel storyboard-panel" id="storyboard"><div className="panel-heading"><div><span className="step">02</span><div><h2>分镜与动态镜头计划</h2><p>默认静帧；仅勾选关键动作镜头计入动态预算</p></div></div><span className="count-pill">{shotCount} 镜头</span></div><div className="scene-list">{scenes.length === 0 ? <div className="empty-state"><div className="empty-icon">▧</div><h3>故事板还空着</h3><p>拆解剧本后，在这里规划静帧和重点动态镜头。</p><span>先做角色参考图，再生成关键镜头</span></div> : scenes.map((scene, sceneIndex) => <article className="scene-card" key={scene.id}><div className="scene-heading"><span className="scene-number">SCENE {String(sceneIndex + 1).padStart(2, '0')}</span><h3>{scene.name}</h3><span className="scene-shot-count">{scene.shots.length} 镜头</span></div><div className="shot-stack">{scene.shots.map((shot, shotIndex) => <div className={`shot-card ${shot.makeVideo ? 'video-planned' : ''}`} key={shot.id}><div className="shot-topline"><span className="shot-number">{String(shotIndex + 1).padStart(2, '0')}</span><span className="shot-label">镜头描述</span><label className="duration-control">时长 <input type="number" min="1" max="30" value={shot.duration} onChange={(event) => updateShot(scene.id, shot.id, { duration: Math.min(30, Math.max(1, Number(event.target.value) || 1)) })} /> 秒</label></div><textarea className="shot-description" value={shot.description} rows={2} onChange={(event) => updateShot(scene.id, shot.id, { description: event.target.value })} aria-label={`${shot.title}描述`} /><div className="shot-actions"><label className="video-toggle"><input type="checkbox" checked={Boolean(shot.makeVideo)} onChange={(event) => updateShot(scene.id, shot.id, { makeVideo: event.target.checked })} /> 重点动态镜头 <span>≈ ¥{(shot.duration * videoPricePerSecond).toFixed(2)}</span></label><button className="text-btn" onClick={() => copyShotPrompt(shot)}>复制{shot.makeVideo ? '视频' : '静帧'}提示词 ↗</button></div></div>)}</div></article>)}</div>{overBudget && <p className="budget-warning">⚠ 已选动态镜头超出剩余预算。取消部分勾选、缩短时长或调整估算单价后再计划。</p>}</section>
         </div>
