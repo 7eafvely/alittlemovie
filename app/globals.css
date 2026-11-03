@@ -636,6 +636,105 @@ input,textarea,select{font-family:inherit}
 .empty-state-edit h2{font-size:18px;margin-bottom:8px}
 .empty-state-edit p{color:var(--text-muted);font-size:13px;margin-bottom:20px}
 
+/* ===== Character Cards (from director manual import) ===== */
+.character-cards{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+.char-card{
+  flex:1;min-width:200px;max-width:320px;
+  padding:14px 16px;
+  border-radius:var(--radius-sm);
+  border:1px solid var(--border);
+  background:var(--bg-card);
+  transition:var(--transition);
+}
+.char-card:hover{border-color:var(--border-accent)}
+.char-card-header{display:flex;align-items:center;gap:12px}
+.char-avatar{
+  width:36px;height:36px;min-width:36px;
+  display:flex;align-items:center;justify-content:center;
+  border-radius:50%;
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));
+  color:#fff;font-size:14px;font-weight:800;
+}
+.char-card-header strong{font-size:13px;display:block}
+.char-look{font-size:10px;color:var(--text-muted);display:block;margin-top:1px;line-height:1.4}
+.char-card-header .text-btn{margin-left:auto;flex-shrink:0}
+.char-details{margin-top:8px}
+.char-details pre{
+  font-size:10px;color:var(--text-secondary);line-height:1.5;
+  white-space:pre-wrap;word-break:break-all;
+  max-height:120px;overflow-y:auto;
+  margin-top:6px;padding:8px;
+  border-radius:4px;background:rgba(0,0,0,.2);
+}
+
+/* ===== Shot Toolbar ===== */
+.shot-toolbar{
+  display:flex;align-items:center;flex-wrap:wrap;gap:8px;
+  padding:12px 0;margin-bottom:12px;
+  border-bottom:1px solid var(--border);
+}
+.toolbar-label{font-size:11px;color:var(--text-muted);white-space:nowrap}
+.toolbar-sep{width:1px;height:18px;background:var(--border);margin:0 4px}
+.toolbar-summary{
+  font-size:11px;color:var(--accent-glow);margin-left:auto;
+  padding:4px 10px;border-radius:999px;
+  background:rgba(139,92,246,.1);
+}
+.mini-btn{
+  padding:5px 12px;border:1px solid var(--border);
+  border-radius:999px;background:rgba(255,255,255,.03);
+  color:var(--text-secondary);font-size:11px;font-weight:600;
+  cursor:pointer;transition:var(--transition);
+  white-space:nowrap;
+}
+.mini-btn:hover{background:rgba(255,255,255,.08);color:var(--text)}
+.primary-mini{border-color:rgba(52,211,153,.3);color:var(--green)}
+.primary-mini:hover{background:rgba(52,211,153,.1)}
+.accent-mini{border-color:var(--border-accent);color:var(--accent-glow)}
+.accent-mini:hover{background:rgba(139,92,246,.1)}
+.accent2-mini{border-color:rgba(236,72,153,.3);color:var(--accent-2)}
+.accent2-mini:hover{background:rgba(236,72,153,.08)}
+.mini-input{
+  width:44px;padding:4px 6px;
+  border:1px solid var(--border);border-radius:6px;
+  background:var(--bg-deep);color:var(--text);
+  font-size:11px;text-align:center;
+}
+.mini-input:focus{outline:none;border-color:var(--accent)}
+
+/* ===== Shot Badges ===== */
+.shot-badge{
+  font-size:10px;padding:2px 8px;border-radius:999px;
+  font-weight:600;white-space:nowrap;
+}
+.dialog-badge{background:rgba(52,211,153,.12);color:var(--green);border:1px solid rgba(52,211,153,.2)}
+.key-badge{background:rgba(245,158,11,.12);color:var(--accent-3);border:1px solid rgba(245,158,11,.2)}
+
+/* ===== Shot Prompt Details ===== */
+.shot-prompt-details{margin-top:6px}
+.shot-prompt-details summary{
+  font-size:11px;color:var(--accent-glow);cursor:pointer;
+  padding:4px 8px;border-radius:4px;
+  display:inline-block;
+}
+.shot-prompt-details summary:hover{background:rgba(139,92,246,.1)}
+.prompt-block{margin-top:8px}
+.prompt-label{
+  font-size:10px;color:var(--text-muted);text-transform:uppercase;
+  display:block;margin-bottom:4px;
+}
+.prompt-block pre{
+  font-size:10px;color:var(--text-secondary);line-height:1.5;
+  white-space:pre-wrap;word-break:break-all;
+  padding:8px;border-radius:6px;
+  background:rgba(0,0,0,.2);border:1px solid var(--border);
+  max-height:150px;overflow-y:auto;
+}
+
+/* ===== Project Bar Extras ===== */
+.stat-tag{font-size:11px;color:var(--accent-glow)}
+.stat-tag b{color:var(--accent-glow)}
+
 /* ===== Responsive ===== */
 @media (max-width:900px){
   .sidebar{display:none}
