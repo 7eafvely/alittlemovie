@@ -113,6 +113,9 @@ export default function Home() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || '导演手册解析失败。');
 
+      // Update script text with imported markdown
+      setScript(text);
+
       const episodes = data.summary?.episodeTitle || '';
       setProjectName(episodes || file.name.replace(/\.(md|MD)$/, ''));
 

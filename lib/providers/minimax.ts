@@ -44,12 +44,13 @@ export const minimaxProvider: VideoProvider = {
       throw new Error(msg);
     }
 
-    if (typeof data.task_id !== 'string' || !data.task_id) {
+    const taskId = String(data.task_id ?? '');
+    if (!taskId) {
       throw new Error('MiniMax did not return a task ID');
     }
 
     return {
-      taskId: data.task_id,
+      taskId,
       model: 'MiniMax-Hailuo-2.3',
       duration: params.duration,
       resolution: params.resolution,
@@ -63,7 +64,7 @@ export const minimaxProvider: VideoProvider = {
     }
 
     const response = await fetch(
-      `${API_BASE}/v2/query/video_generation/${encodeURIComponent(taskId)}`,
+      `${API_BASE}/v1/query/video_generation?task_id=${encodeURIComponent(taskId)}`,
       {
         headers: { Authorization: `Bearer ${apiKey}` },
         cache: 'no-store',
@@ -79,12 +80,39 @@ export const minimaxProvider: VideoProvider = {
       throw new Error(msg);
     }
 
-    return {
-      status: typeof data.status === 'string' ? data.status : 'unknown',
-      videoUrl:
-        typeof data.video_url === 'string' && data.video_url
-          ? data.video_url
-          : null,
-    };
+    // MiniMax returns status like "Queueing", "Processing", "Success", "Fail"
+    // Normalize to standard lowercase statuses
+    const rawStatus = data.status || 'unknown';
+    let status = 'processing';
+    if (rawStatus === 'Queueing' || rawStatus === 'Preparing') status = 'queued';
+    else if (rawStatus === 'Processing') status = 'processing';
+    else if (rawStatus === 'Success') status = 'succeeded';
+    else if (rawStatus === 'Fail') status = 'failed';
+    else status = rawStatus.toLowerCase();
+
+    // When done, MiniMax returns file_id not video_url
+    // Need to call download API to get the actual video URL
+    let videoUrl: string | null = null;
+    if (typeof data.video_url === 'string' && data.video_url) {
+      videoUrl = data.video_url;
+    } else if (status === 'Success' && data.file_id) {
+      // Fetch download URL from file_id
+      const fileId = data.file_id;
+      if (fileId) {
+        const dlResp = await fetch(
+          `${API_BASE}/v1/files/retrieve?file_id=${encodeURIComponent(fileId)}`,
+          {
+            headers: { Authorization: `Bearer ${apiKey}` },
+            cache: 'no-store',
+          }
+        );
+        const dlData = await dlResp.json().catch(() => ({}));
+        if (dlData.file?.download_url) {
+          videoUrl = dlData.file.download_url;
+        }
+      }
+    }
+
+    return { status, videoUrl };
   },
 };

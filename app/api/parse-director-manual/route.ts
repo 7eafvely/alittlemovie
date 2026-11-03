@@ -40,7 +40,13 @@ export async function POST(request: Request) {
     let episodeTitle = '';
     for (const line of lines) {
       const match = line.match(/^#\s+(.+)/);
-      if (match) { episodeTitle = match[1].trim(); break; }
+      if (match) {
+        let title = match[1].trim();
+        // Clean: remove "导演手册" suffix, keep episode identifier
+        title = title.replace(/导演手册$/, '').trim();
+        episodeTitle = title;
+        break;
+      }
     }
 
     // ====== Parse Characters from Asset Table ======
