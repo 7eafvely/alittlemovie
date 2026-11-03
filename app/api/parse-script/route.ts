@@ -27,7 +27,7 @@ export async function POST(request: Request) {
         id: `scene-${sceneIndex + 1}-shot-${shotIndex + 1}`,
         title: `镜头 ${shotIndex + 1}`,
         description: line.replace(/^[-*\s]+/, '').slice(0, 500),
-        duration: 5,
+        duration: 6,
         status: 'draft' as const,
       }));
       return { id: `scene-${sceneIndex + 1}`, name, shots };

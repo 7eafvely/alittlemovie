@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
 
-const API_BASE = 'https://api.minimax.io';
+const API_BASE = process.env.MINIMAX_API_BASE || 'https://api.minimax.io';
 const ALLOWED_DURATIONS = new Set([6, 10]);
 const MAX_PROMPT_LENGTH = 2_000;
 
@@ -32,6 +32,7 @@ export async function POST(request: Request) {
     if (!prompt) return NextResponse.json({ error: '镜头提示词不能为空。' }, { status: 400 });
     if (prompt.length > MAX_PROMPT_LENGTH) return NextResponse.json({ error: `提示词不能超过 ${MAX_PROMPT_LENGTH} 个字符。` }, { status: 400 });
     if (!ALLOWED_DURATIONS.has(duration)) return NextResponse.json({ error: '当前仅支持 6 秒或 10 秒镜头。' }, { status: 400 });
+    if (duration === 10 && resolution === '1080P') return NextResponse.json({ error: 'MiniMax-Hailuo-2.3 的 10 秒镜头仅支持 768P，请改用 768P 或把时长缩短为 6 秒。' }, { status: 400 });
 
     if (firstFrameImage) {
       let imageUrl: URL;
@@ -57,6 +58,12 @@ export async function POST(request: Request) {
     if (!upstream.ok) {
       const message = typeof data.base_resp?.status_msg === 'string' ? data.base_resp.status_msg : '视频服务提交失败，请检查账号额度、模型权限和请求参数。';
       return NextResponse.json({ error: message }, { status: upstream.status >= 400 && upstream.status < 600 ? upstream.status : 502 });
+    }
+    // MiniMax v1 业务错误时仍返回 HTTP 200，需检查 base_resp.status_code
+    const code = typeof data.base_resp?.status_code === 'number' ? data.base_resp.status_code : 0;
+    if (code !== 0) {
+      const message = typeof data.base_resp?.status_msg === 'string' ? data.base_resp.status_msg : `视频服务返回错误码 ${code}，请查看服务商控制台。`;
+      return NextResponse.json({ error: message }, { status: 502 });
     }
     if (typeof data.task_id !== 'string' || !data.task_id) {
       return NextResponse.json({ error: '服务商没有返回任务编号，请查看服务商控制台。' }, { status: 502 });

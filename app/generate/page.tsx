@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 type Shot = { id: string; title: string; description: string; duration: number; makeVideo?: boolean };
 type Scene = { id: string; name: string; shots: Shot[] };
@@ -40,7 +40,7 @@ export default function GeneratePage() {
 
   const makePrompt = (shot: Shot) => `${shot.description}\n${project?.characterNotes ? `角色外观：${project.characterNotes}\n` : ''}${project?.visualStyle ?? ''}\n竖屏 9:16，保持参考图中人物的脸、发型、服装和整体画风一致。动作自然连贯，避免人物外观变化。`;
 
-  const refreshJob = async (job: VideoJob) => {
+  const refreshJob = useCallback(async (job: VideoJob) => {
     try {
       const response = await fetch(`/api/video-generation/status?taskId=${encodeURIComponent(job.taskId)}`, {
         headers: { 'x-alittlemovie-access-code': accessCode }, cache: 'no-store',
@@ -51,7 +51,7 @@ export default function GeneratePage() {
     } catch (error) {
       setJobs((current) => current.map((item) => item.taskId === job.taskId ? { ...item, error: error instanceof Error ? error.message : '查询失败' } : item));
     }
-  };
+  }, [accessCode]);
 
   useEffect(() => {
     if (!accessCode) return;
@@ -59,7 +59,7 @@ export default function GeneratePage() {
     if (!pending.length) return;
     const timer = window.setTimeout(() => { pending.forEach((job) => void refreshJob(job)); }, 8000);
     return () => window.clearTimeout(timer);
-  }, [jobs, accessCode]);
+  }, [jobs, accessCode, refreshJob]);
 
   const generate = async (shot: Shot) => {
     if (!project) return;
@@ -109,7 +109,7 @@ export default function GeneratePage() {
     {message && <div className="notice" role="status"><span>✦</span><span className="notice-text">{message}</span><button onClick={() => setMessage('')} aria-label="关闭提示">×</button></div>}
     <section className="generate-jobs"><h2>重点动态镜头</h2>
       {!selectedShots.length && <div className="panel empty-state"><h3>没有已勾选的镜头</h3><p>回工作台勾选“重点动态镜头”，保存草稿后再回来。</p></div>}
-      {selectedShots.map((shot) => <article className="panel generation-shot" key={shot.id}><div className="generation-shot-header"><div><span className="shot-number">{shot.title}</span><h3>{shot.sceneName}</h3></div><span>{shot.duration} 秒 · 估算 ¥{(shot.duration * unitPrice).toFixed(2)}</span></div><p>{shot.description}</p><details><summary>查看实际提交提示词</summary><pre>{makePrompt(shot)}</pre></details><button className="primary-btn" disabled={Boolean(busyShot) || !acknowledged || shot.duration > 10 || shot.duration < 1} onClick={() => void generate(shot)}>{busyShot === shot.id ? '提交中…' : '生成这个镜头'}</button>{(shot.duration !== 6 && shot.duration !== 10) && <span className="field-note">当前服务仅接受 6 秒或 10 秒镜头，请回工作台调整时长。</span>}</article>)}
+      {selectedShots.map((shot) => { const durationValid = shot.duration === 6 || shot.duration === 10; const resolutionValid = !(shot.duration === 10 && resolution === '1080P'); const issue = !durationValid ? '当前服务仅接受 6 秒或 10 秒镜头，请回工作台调整时长。' : !resolutionValid ? '10 秒镜头仅支持 768P 分辨率，请切换分辨率或缩短时长。' : ''; return <article className="panel generation-shot" key={shot.id}><div className="generation-shot-header"><div><span className="shot-number">{shot.title}</span><h3>{shot.sceneName}</h3></div><span>{shot.duration} 秒 · 估算 ¥{(shot.duration * unitPrice).toFixed(2)}</span></div><p>{shot.description}</p><details><summary>查看实际提交提示词</summary><pre>{makePrompt(shot)}</pre></details><button className="primary-btn" disabled={Boolean(busyShot) || !acknowledged || !durationValid || !resolutionValid} onClick={() => void generate(shot)}>{busyShot === shot.id ? '提交中…' : '生成这个镜头'}</button>{issue && <span className="field-note">{issue}</span>}</article>; })}
     </section>
 
     {!!jobs.length && <section className="generate-jobs"><h2>生成任务</h2>{jobs.map((job) => <article className="panel generation-shot" key={job.taskId}><div className="generation-shot-header"><h3>镜头任务</h3><span className="job-status">{job.status}</span></div><p>任务编号：{job.taskId} · 时长 {job.duration} 秒 · 预算预留 ¥{job.estimatedCost.toFixed(2)}</p>{job.error && <p className="job-error">{job.error}</p>}{job.videoUrl && <><video className="generated-video" src={job.videoUrl} controls playsInline /><a className="text-btn download-link" href={job.videoUrl} target="_blank" rel="noreferrer">打开/下载生成视频 ↗</a></>}<button className="secondary-btn" onClick={() => void refreshJob(job)}>刷新任务状态</button></article>)}</section>}
