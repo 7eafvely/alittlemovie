@@ -173,9 +173,9 @@ export async function POST(request: Request) {
       if (inTable && !inTableHeader && trimmed.startsWith('|') && trimmed.includes('|')) {
         const cells = trimmed.split('|').map(c => c.trim()).filter(Boolean);
         if (cells.length >= 4 && /^\d+$/.test(cells[0])) {
-          // Check if has dialog (口型镜=yes or specific character)
-          const hasAudioCol = cells.length >= 6;
-          const dialogCell = hasAudioCol ? cells[4] : '';
+          // Column layout: 镜号|镜头名|时间|时长|场景|生成方式|口型镜|首帧
+          // cells[0]=镜号 cells[1]=镜头名 cells[3]=时长 cells[6]=口型镜
+          const dialogCell = cells.length >= 7 ? cells[6] : '';
           const hasDialog = dialogCell.startsWith('是');
           const title = cells[1] || `镜头 ${cells[0]}`;
 
@@ -183,7 +183,8 @@ export async function POST(request: Request) {
           const isKeyMoment = hasDialog ||
             title.includes('对视') || title.includes('落座') ||
             title.includes('回头') || title.includes('起身') ||
-            title.includes('成交') || title.includes('领证');
+            title.includes('成交') || title.includes('领证') ||
+            title.includes('逗笑') || title.includes('坦白');
 
           shots.push({
             title,

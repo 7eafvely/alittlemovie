@@ -1,6 +1,6 @@
 import type { GenerateParams, GenerateResult, StatusResult, VideoProvider } from './types';
 
-const API_BASE = 'https://api.minimax.io';
+const API_BASE = 'https://api.minimaxi.com';
 
 export const minimaxProvider: VideoProvider = {
   name: 'minimax',
@@ -95,7 +95,7 @@ export const minimaxProvider: VideoProvider = {
     let videoUrl: string | null = null;
     if (typeof data.video_url === 'string' && data.video_url) {
       videoUrl = data.video_url;
-    } else if (status === 'Success' && data.file_id) {
+    } else if (status === 'succeeded' && data.file_id) {
       // Fetch download URL from file_id
       const fileId = data.file_id;
       if (fileId) {
