@@ -1,44 +1,33 @@
-import { NextResponse } from 'next/server';
+# Alittlemovie
 
-export async function POST(request: Request) {
-  const { script } = await request.json();
+面向个人创作者的剧本到短剧工作台。当前版本提供可运行的前端原型：剧本拆分、分镜编辑、浏览器本地草稿、提示词复制和项目 JSON 导出。
 
-  const cleaned = String(script || '').trim();
-  if (!cleaned) {
-    return NextResponse.json({ scenes: [] }, { status: 200 });
-  }
+> 当前剧本拆解使用基础规则，不是 AI 剧本模型；视频生成、账号、云端持久化和 MP4 导出尚未接入。界面会明确提示这一点，不会伪装成已经生成视频。
 
-  const blocks = cleaned
-    .split(/\n\s*\n+/)
-    .map((block) => block.trim())
-    .filter(Boolean);
+## 本地运行
 
-  const scenes = blocks.map((block, index) => {
-    const sceneNameMatch = block.match(/(?:场景|SCENE)\s*[:：]?\s*(.+)/i);
-    const sceneName = sceneNameMatch ? sceneNameMatch[1].trim() : `场景 ${index + 1}`;
+要求 Node.js 18.17 或更高版本。
 
-    const lines = block
-      .split(/\n/)
-      .map((line) => line.trim())
-      .filter(Boolean)
-      .slice(0, 3);
+```bash
+npm install
+npm run dev
+```
 
-    const shots = lines.map((line, shotIndex) => ({
-      id: `shot-${index + 1}-${shotIndex + 1}`,
-      title: `镜头 ${shotIndex + 1}`,
-      description: line.replace(/^[-*\s]+/, '').slice(0, 120),
-    }));
+打开 http://localhost:3000。
 
-    return {
-      id: `scene-${index + 1}`,
-      name: sceneName,
-      shots: shots.length > 0 ? shots : [{
-        id: `shot-${index + 1}-1`,
-        title: '镜头 1',
-        description: '根据剧本内容生成的情绪镜头。',
-      }],
-    };
-  });
+## 当前功能
 
-  return NextResponse.json({ scenes });
-}
+- 将剧本按空行和场景标题拆为场景与镜头
+- 编辑镜头描述和建议时长
+- 保存当前项目到浏览器 `localStorage`
+- 将镜头提示词复制到剪贴板
+- 导出项目 JSON 文件
+- 服务端校验剧本文本，并限制最大长度
+
+本地草稿仅保存在当前浏览器，不等同于账号云端保存；清除浏览器数据会移除草稿。导出的 JSON 可作为后续云存储和生成任务的数据结构基础。
+
+## 视频生成接入计划
+
+视频生成应采用服务端异步任务：前端提交单镜头任务，服务端通过 provider adapter 调用供应商，保存 provider job ID 和状态，前端轮询或接收 webhook 更新状态，完成后将媒体保存到对象存储。API 密钥只配置在服务端环境变量，不能暴露给浏览器或提交到 Git。
+
+在选择具体服务商、模型、区域可用性和价格前，本项目不默认绑定供应商。开始接入时需要补上任务持久化、队列/重试、限额、结果存储及服务商适配层。
