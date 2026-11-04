@@ -69,18 +69,19 @@ export default function Home() {
     finally { setIsLoading(false); }
   };
 
-  const importDemo = async () => {
+  const importDemo = async (ep: number) => {
     setIsLoading(true); setNotice('');
     try {
-      const response = await fetch('/demo-ep01.json');
-      if (!response.ok) throw new Error('示例项目加载失败，请确认文件存在。');
+      const fileName = ep === 1 ? '/demo-ep01.json' : `/ep${String(ep).padStart(2, '0')}.json`;
+      const response = await fetch(fileName);
+      if (!response.ok) throw new Error(`第${ep}集示例项目加载失败，请确认文件存在。`);
       const demo = await response.json();
       const loaded = (demo.scenes ?? []).map((scene: Scene) => ({
         ...scene,
         shots: (scene.shots ?? []).map((shot: Shot) => ({ ...shot, makeVideo: false })),
       }));
       if (!loaded.length) throw new Error('示例项目没有可导入的镜头。');
-      setProjectName(demo.name || '闪婚老公掉马甲·第01集');
+      setProjectName(demo.name || `闪婚老公掉马甲·第${ep}集`);
       setScript(demo.script ?? script);
       setScenes(loaded);
       setCharacterNotes(demo.characterNotes ?? characterNotes);
@@ -138,7 +139,7 @@ export default function Home() {
           <p className="budget-disclaimer">价格仅为你可编辑的估算值（默认 ¥0.60/秒，不代表任何服务商报价）。正式生成前请核对平台实时价格；此处不调用 API、不产生费用。</p>
         </section>
 
-        <section className="panel character-panel" id="characters"><div className="panel-heading"><div><span className="step">00</span><div><h2>角色与视觉设定</h2><p>先确定可复用的角色描述和背景风格，减少镜头漂移</p></div></div><div style={{ display: 'flex', gap: 8, alignItems: 'center' }}><button className="secondary-btn" onClick={importDemo} disabled={isLoading}>{isLoading ? '导入中…' : '导入《闪婚老公掉马甲》第01集'}</button><button className="text-btn" onClick={() => copyText(characterPrompt, '角色设定提示词已复制，可在你选择的图片生成工具中制作参考图。')}>复制角色设定提示词 ↗</button></div></div><div className="character-grid"><label>人物大致形象<textarea value={characterNotes} rows={4} onChange={(event) => { setCharacterNotes(event.target.value); markChanged(); }} placeholder="例如：年龄、发型、服装、气质、人物关系" /></label><label>统一画面风格<textarea value={visualStyle} rows={4} onChange={(event) => { setVisualStyle(event.target.value); markChanged(); }} placeholder="例如：电影感写实、光线、色彩、画幅" /></label></div><p className="character-tip">建议先用免费额度或已有工具制作角色正面/半身参考图和场景图，人工挑选满意版本后再复用；本页面只生成提示词，不会实际生成图片。</p></section>
+        <section className="panel character-panel" id="characters"><div className="panel-heading"><div><span className="step">00</span><div><h2>角色与视觉设定</h2><p>先确定可复用的角色描述和背景风格，减少镜头漂移</p></div></div><div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}><select className="ep-select" defaultValue="1" onChange={(e) => void importDemo(Number(e.target.value))} disabled={isLoading} aria-label="选择要导入的集数"><option value="1">第01集《走错桌》</option><option value="2">第02集《领证》</option><option value="3">第03集《搬进来》</option><option value="4">第04集《婚姻协议》</option><option value="5">第05集《念念甜品》</option><option value="6">第06集《她是我妻子》</option><option value="7">第07集《同屋檐下》</option><option value="8">第08集《心动》</option><option value="9">第09集《挡酒》</option><option value="10">第10集《旧伤》</option><option value="11">第11集《曝光危机》</option><option value="12">第12集《云舒窈》</option><option value="13">第13集《同框》</option><option value="14">第14集《霍太太》</option><option value="15">第15集《不示弱》</option><option value="16">第16集《甜点大赛》</option><option value="17">第17集《生日》</option><option value="18">第18集《挑拨》</option><option value="19">第19集《误会》</option><option value="20">第20集《掉马》</option></select><button className="text-btn" onClick={() => copyText(characterPrompt, '角色设定提示词已复制，可在你选择的图片生成工具中制作参考图。')}>复制角色设定提示词 ↗</button></div></div><div className="character-grid"><label>人物大致形象<textarea value={characterNotes} rows={4} onChange={(event) => { setCharacterNotes(event.target.value); markChanged(); }} placeholder="例如：年龄、发型、服装、气质、人物关系" /></label><label>统一画面风格<textarea value={visualStyle} rows={4} onChange={(event) => { setVisualStyle(event.target.value); markChanged(); }} placeholder="例如：电影感写实、光线、色彩、画幅" /></label></div><p className="character-tip">建议先用免费额度或已有工具制作角色正面/半身参考图和场景图，人工挑选满意版本后再复用；本页面只生成提示词，不会实际生成图片。</p></section>
 
         <section className="project-bar panel"><div className="project-icon">▶</div><label className="project-name-label">项目名称<input value={projectName} onChange={(event) => { setProjectName(event.target.value); markChanged(); }} aria-label="项目名称" /></label><div className="project-stats"><span><b>{scenes.length}</b> 场景</span><i /><span><b>{shotCount}</b> 镜头</span><i /><span><b>{totalDuration}</b> 秒故事板</span></div><span className={`save-state ${saved ? 'is-saved' : ''}`}>{saved ? '● 已保存' : '○ 未保存'}</span></section>
 
