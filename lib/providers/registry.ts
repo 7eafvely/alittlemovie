@@ -1,9 +1,11 @@
 import type { VideoProvider } from './types';
 import { minimaxProvider } from './minimax';
+import { libtvProvider } from './libtv';
 import { mockProvider } from './mock';
 
 const providers: Record<string, VideoProvider> = {
   minimax: minimaxProvider,
+  libtv: libtvProvider,
   mock: mockProvider,
 };
 

@@ -6,15 +6,17 @@ type Shot = { id: string; title: string; description: string; duration: number; 
 type Scene = { id: string; name: string; shots: Shot[] };
 type Project = { name: string; script: string; scenes: Scene[]; characterNotes?: string; visualStyle?: string; monthlySpent?: number; videoPricePerSecond?: number; characterImages?: Record<string, string> };
 type VideoJob = { shotId: string; taskId: string; status: string; videoUrl?: string | null; error?: string | null; prompt: string; duration: number; estimatedCost: number };
+type Capabilities = { name: string; displayName: string; supportedDurations: number[]; supportedResolutions: string[]; maxPromptLength: number };
 const PROJECT_KEY = 'alittlemovie-project-v2';
 const JOBS_KEY = 'alittlemovie-video-jobs-v1';
 const TERMINAL = new Set(['succeeded', 'success', 'failed', 'fail', 'cancelled', 'canceled']);
 
 export default function GeneratePage() {
   const [project, setProject] = useState<Project | null>(null);
+  const [capabilities, setCapabilities] = useState<Capabilities | null>(null);
   const [accessCode, setAccessCode] = useState('');
   const [referenceImage, setReferenceImage] = useState('');
-  const [resolution, setResolution] = useState<'768P' | '1080P'>('1080P');
+  const [resolution, setResolution] = useState<string>('1080P');
   const [jobs, setJobs] = useState<VideoJob[]>([]);
   const [busyShot, setBusyShot] = useState('');
   const [message, setMessage] = useState('');
@@ -29,6 +31,20 @@ export default function GeneratePage() {
       const code = sessionStorage.getItem('alittlemovie-access-code');
       if (code) setAccessCode(code);
     } catch { setMessage('无法读取本地项目数据，请回工作台重新保存项目。'); }
+  }, []);
+
+  // 读取当前服务商能力，据此渲染时长/分辨率选项与品牌文案
+  useEffect(() => {
+    void (async () => {
+      try {
+        const response = await fetch('/api/video-generation/capabilities', { cache: 'no-store' });
+        const data = await response.json();
+        if (response.ok && data.supportedResolutions?.length) {
+          setCapabilities(data as Capabilities);
+          setResolution(data.supportedResolutions[0]);
+        }
+      } catch { /* 保持默认，服务端会在提交时兜底报错 */ }
+    })();
   }, []);
 
   useEffect(() => { localStorage.setItem(JOBS_KEY, JSON.stringify(jobs)); }, [jobs]);
@@ -121,14 +137,14 @@ export default function GeneratePage() {
 
   return <main className="generate-page">
     <a className="back-link" href="/">← 返回剧本工作台</a>
-    <header className="generate-header"><p className="eyebrow">MINIMAX HAILUO · 单镜头生成</p><h1>{project.name || '我的短剧'}：生成视频镜头</h1><p>只提交勾选的关键镜头；角色参考图可帮助保持人物和画风一致，但效果不保证完全相同。</p></header>
+    <header className="generate-header"><p className="eyebrow">{capabilities?.displayName ?? 'AI 视频'} · 单镜头生成</p><h1>{project.name || '我的短剧'}：生成视频镜头</h1><p>只提交勾选的关键镜头；角色参考图可帮助保持人物和画风一致，但效果不保证完全相同。</p></header>
     <section className="panel generate-panel">
       <h2>连接你自己的 MiniMax API</h2>
       <p>API Key 必须留在服务端环境变量，不能填进网页或代码仓库。访问码由你在本机配置，用于避免他人随意调用你的额度。</p>
       <label className="form-label">本地访问码<input type="password" autoComplete="current-password" value={accessCode} onChange={(event) => setAccessCode(event.target.value)} placeholder="与 .env.local 中的 ALITTLEMOVIE_ACCESS_CODE 一致" /></label>
       <label className="form-label">场景/全局参考图 HTTPS 链接（可选，兜底用）<input type="url" value={referenceImage} onChange={(event) => setReferenceImage(event.target.value)} placeholder="https://... 可公开访问的图片地址" /></label>
       <p className="field-note">镜头会优先使用其出场角色在工作台填写的「角色定妆图」作首帧（锁长相）；没有定妆图时才回退到这里填的链接。只支持可被服务商访问的 HTTPS 图片 URL。</p>
-      <label className="form-label">分辨率<select value={resolution} onChange={(event) => setResolution(event.target.value as '768P' | '1080P')}><option value="1080P">1080P（画质更好，仅支持 6 秒镜头）</option><option value="768P">768P（6 秒 / 10 秒镜头均可用）</option></select></label>
+      <label className="form-label">分辨率<select value={resolution} onChange={(event) => setResolution(event.target.value)}>{(capabilities?.supportedResolutions ?? ['1080P', '768P']).map((r) => <option key={r} value={r}>{r}</option>)}</select></label>
       <div className="cost-confirm"><input id="cost-ack" type="checkbox" checked={acknowledged} onChange={(event) => setAcknowledged(event.target.checked)} /><label htmlFor="cost-ack">我知道点击生成会调用真实 API 并产生费用；已核对当前模型价格和账户余额。</label></div>
       <div className="generation-budget"><span>可选关键镜头：{selectedShots.length}</span><span>剩余估算预算：¥{remaining.toFixed(2)}</span><span>所选镜头估算：¥{estimatedTotal.toFixed(2)}</span></div>
       <p className="field-note">网页仅按你在工作台填写的估算单价预留预算，不能读取或限制 MiniMax 账户账单。请先核对官方实时价格；任务失败也可能产生费用。生成结果链接可能会过期，请完成后立即下载。</p>
@@ -137,7 +153,7 @@ export default function GeneratePage() {
     {message && <div className="notice" role="status"><span>✦</span><span className="notice-text">{message}</span><button onClick={() => setMessage('')} aria-label="关闭提示">×</button></div>}
     <section className="generate-jobs"><h2>重点动态镜头</h2>
       {!selectedShots.length && <div className="panel empty-state"><h3>没有已勾选的镜头</h3><p>回工作台勾选“重点动态镜头”，保存草稿后再回来。</p></div>}
-      {selectedShots.map((shot) => { const durationValid = shot.duration === 6 || shot.duration === 10; const resolutionValid = !(shot.duration === 10 && resolution === '1080P'); const issue = !durationValid ? '当前服务仅接受 6 秒或 10 秒镜头，请回工作台调整时长。' : !resolutionValid ? '10 秒镜头仅支持 768P 分辨率，请切换分辨率或缩短时长。' : ''; const firstFrame = resolveFirstFrame(shot); const charNames = (shot.characters ?? []).filter((n) => (project?.characterImages ?? {})[n]?.trim()); return <article className="panel generation-shot" key={shot.id}><div className="generation-shot-header"><div><span className="shot-number">{shot.title}</span><h3>{shot.sceneName}</h3></div><span>{shot.duration} 秒 · 估算 ¥{(shot.duration * unitPrice).toFixed(2)}</span></div><p>{shot.description}</p>{(charNames.length > 0 || firstFrame) && <p className="field-note" style={{ color: '#b6d485' }}>首帧：{charNames.length > 0 ? `角色定妆图（${charNames.join('、')}）` : '全局参考图'}</p>}<details><summary>查看实际提交提示词</summary><pre>{makePrompt(shot)}</pre></details><button className="primary-btn" disabled={Boolean(busyShot) || !acknowledged || !durationValid || !resolutionValid} onClick={() => void generate(shot)}>{busyShot === shot.id ? '提交中…' : '生成这个镜头'}</button>{issue && <span className="field-note">{issue}</span>}</article>; })}
+      {selectedShots.map((shot) => { const supportedDurations = capabilities?.supportedDurations ?? [6, 10]; const durationValid = supportedDurations.includes(shot.duration); const issue = !durationValid ? `当前服务商仅接受 ${supportedDurations.join(' / ')} 秒镜头，请回工作台调整时长。` : ''; const firstFrame = resolveFirstFrame(shot); const charNames = (shot.characters ?? []).filter((n) => (project?.characterImages ?? {})[n]?.trim()); return <article className="panel generation-shot" key={shot.id}><div className="generation-shot-header"><div><span className="shot-number">{shot.title}</span><h3>{shot.sceneName}</h3></div><span>{shot.duration} 秒 · 估算 ¥{(shot.duration * unitPrice).toFixed(2)}</span></div><p>{shot.description}</p>{(charNames.length > 0 || firstFrame) && <p className="field-note" style={{ color: '#b6d485' }}>首帧：{charNames.length > 0 ? `角色定妆图（${charNames.join('、')}）` : '全局参考图'}</p>}<details><summary>查看实际提交提示词</summary><pre>{makePrompt(shot)}</pre></details><button className="primary-btn" disabled={Boolean(busyShot) || !acknowledged || !durationValid} onClick={() => void generate(shot)}>{busyShot === shot.id ? '提交中…' : '生成这个镜头'}</button>{issue && <span className="field-note">{issue}</span>}</article>; })}
     </section>
 
     {!!jobs.length && <section className="generate-jobs"><h2>生成任务</h2>{jobs.map((job) => <article className="panel generation-shot" key={job.taskId}><div className="generation-shot-header"><h3>镜头任务</h3><span className="job-status">{job.status}</span></div><p>任务编号：{job.taskId} · 时长 {job.duration} 秒 · 预算预留 ¥{job.estimatedCost.toFixed(2)}</p>{job.error && <p className="job-error">{job.error}</p>}{job.videoUrl && <><video className="generated-video" src={job.videoUrl} controls playsInline /><a className="text-btn download-link" href={job.videoUrl} target="_blank" rel="noreferrer">打开/下载生成视频 ↗</a></>}<button className="secondary-btn" onClick={() => void refreshJob(job)}>刷新任务状态</button></article>)}</section>}

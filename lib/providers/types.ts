@@ -1,7 +1,7 @@
 export interface GenerateParams {
   prompt: string;
   duration: number;
-  resolution: '768P' | '1080P';
+  resolution: string;
   firstFrameImage?: string;
 }
 
