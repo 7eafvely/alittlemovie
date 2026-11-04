@@ -13,9 +13,9 @@ const sampleScript = `场景一：城市夜晚，女主在雨中奔跑。
 const STORAGE_KEY = 'alittlemovie-project-v2';
 const MONTHLY_BUDGET = 100;
 
-type Shot = { id: string; title: string; description: string; duration: number; status: 'draft' | 'ready'; makeVideo?: boolean };
+type Shot = { id: string; title: string; description: string; duration: number; status: 'draft' | 'ready'; makeVideo?: boolean; characters?: string[] };
 type Scene = { id: string; name: string; shots: Shot[] };
-type Project = { name: string; script: string; scenes: Scene[]; characterNotes?: string; visualStyle?: string; monthlySpent?: number; videoPricePerSecond?: number };
+type Project = { name: string; script: string; scenes: Scene[]; characterNotes?: string; visualStyle?: string; monthlySpent?: number; videoPricePerSecond?: number; characterImages?: Record<string, string> };
 
 export default function Home() {
   const [projectName, setProjectName] = useState('雨夜重逢');
@@ -25,6 +25,7 @@ export default function Home() {
   const [visualStyle, setVisualStyle] = useState('电影感真人写实，柔和电影光，自然肤色，电影级调色，细腻情绪');
   const [monthlySpent, setMonthlySpent] = useState(0);
   const [videoPricePerSecond, setVideoPricePerSecond] = useState(0.6);
+  const [characterImages, setCharacterImages] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [notice, setNotice] = useState('');
   const [saved, setSaved] = useState(false);
@@ -37,7 +38,9 @@ export default function Home() {
       setProjectName(project.name || '未命名短剧'); setScript(project.script || sampleScript);
       setScenes(Array.isArray(project.scenes) ? project.scenes : []);
       setCharacterNotes(project.characterNotes ?? ''); setVisualStyle(project.visualStyle ?? '');
-      setMonthlySpent(project.monthlySpent ?? 0); setVideoPricePerSecond(project.videoPricePerSecond ?? 0.6); setSaved(true);
+      setMonthlySpent(project.monthlySpent ?? 0); setVideoPricePerSecond(project.videoPricePerSecond ?? 0.6);
+      setCharacterImages(project.characterImages ?? {});
+      setSaved(true);
     } catch { localStorage.removeItem(STORAGE_KEY); }
   }, []);
 
@@ -88,6 +91,7 @@ export default function Home() {
       setVisualStyle(demo.visualStyle ?? visualStyle);
       setMonthlySpent(demo.monthlySpent ?? 0);
       setVideoPricePerSecond(demo.videoPricePerSecond ?? 0.6);
+      setCharacterImages(demo.characterImages ?? {});
       markChanged();
       setNotice(`已导入「${demo.name}」：${loaded.length} 个场景、${loaded.reduce((n: number, s: Scene) => n + s.shots.length, 0)} 个镜头。请在分镜区勾选要生成的镜头，再点右下角「去生成视频」。`);
     } catch (error) { setNotice(error instanceof Error ? error.message : '导入失败。'); }
@@ -95,14 +99,14 @@ export default function Home() {
   };
 
   const saveProject = () => {
-    const project: Project = { name: projectName, script, scenes, characterNotes, visualStyle, monthlySpent, videoPricePerSecond };
+    const project: Project = { name: projectName, script, scenes, characterNotes, visualStyle, monthlySpent, videoPricePerSecond, characterImages };
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(project)); setSaved(true); setNotice('项目已保存在当前浏览器。'); }
     catch { setNotice('浏览器存储空间不足，请先导出项目备份。'); }
   };
 
   const exportProject = () => {
     const project: Project & { budget: object; exportedAt: string } = {
-      name: projectName, script, scenes, characterNotes, visualStyle, monthlySpent, videoPricePerSecond,
+      name: projectName, script, scenes, characterNotes, visualStyle, monthlySpent, videoPricePerSecond, characterImages,
       budget: { monthlyLimitRmb: MONTHLY_BUDGET, plannedVideoSeconds, estimatedPlannedVideoCostRmb: Number(plannedVideoCost.toFixed(2)), remainingRmb: Number(remainingBudget.toFixed(2)) },
       exportedAt: new Date().toISOString(),
     };
@@ -118,6 +122,24 @@ export default function Home() {
   };
   const characterPrompt = `请为短剧设计角色参考图。角色设定：\n${characterNotes}\n统一视觉风格：${visualStyle}\n请生成清晰、稳定、便于后续镜头复用的角���设定图，包含正面全身、半身和面部特写；保持服装、发型、年龄特征一致。`;
   const copyShotPrompt = (shot: Shot) => copyText(`${shot.description}\n${visualStyle}\n竖屏 9:16，时长约 ${shot.duration} 秒。严格保持角色参考图中的脸、发型和服装一致。${shot.makeVideo ? '生成自然连贯的微动作与镜头运动，避免切换人物外观。' : '生成高质量电影感静帧，适合作为带缓慢推拉运镜的分镜画面。'}`, '提示词已复制。');
+
+  // 从分镜中收集出场角色，用于定妆图管理
+  const castList = useMemo(() => {
+    const set = new Set<string>();
+    scenes.forEach((scene) => scene.shots.forEach((shot) => (shot.characters ?? []).forEach((c) => set.add(c))));
+    return Array.from(set);
+  }, [scenes]);
+
+  const characterImagePrompt = (name: string) => {
+    const line = characterNotes.split('\n').find((l) => l.includes(name));
+    const desc = line ? line.replace(/^[^:：]*[：:]\s*/, '').trim() : '';
+    return `电影感真人写实角色定妆图，${name}${desc ? '，' + desc : ''}。正面半身，面部清晰，柔和均匀影棚光，中性浅灰纯色背景，超高清，真实皮肤纹理与发丝细节，无文字，无水印`;
+  };
+
+  const setCharacterImage = (name: string, url: string) => {
+    setCharacterImages((cur) => ({ ...cur, [name]: url.trim() }));
+    markChanged();
+  };
 
   return (
     <main className="studio-shell">
@@ -139,7 +161,7 @@ export default function Home() {
           <p className="budget-disclaimer">价格仅为你可编辑的估算值（默认 ¥0.60/秒，不代表任何服务商报价）。正式生成前请核对平台实时价格；此处不调用 API、不产生费用。</p>
         </section>
 
-        <section className="panel character-panel" id="characters"><div className="panel-heading"><div><span className="step">00</span><div><h2>角色与视觉设定</h2><p>先确定可复用的角色描述和背景风格，减少镜头漂移</p></div></div><div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}><select className="ep-select" defaultValue="1" onChange={(e) => void importDemo(Number(e.target.value))} disabled={isLoading} aria-label="选择要导入的集数"><option value="1">第01集《走错桌》</option><option value="2">第02集《领证》</option><option value="3">第03集《搬进来》</option><option value="4">第04集《婚姻协议》</option><option value="5">第05集《念念甜品》</option><option value="6">第06集《她是我妻子》</option><option value="7">第07集《同屋檐下》</option><option value="8">第08集《心动》</option><option value="9">第09集《挡酒》</option><option value="10">第10集《旧伤》</option><option value="11">第11集《曝光危机》</option><option value="12">第12集《云舒窈》</option><option value="13">第13集《同框》</option><option value="14">第14集《霍太太》</option><option value="15">第15集《不示弱》</option><option value="16">第16集《甜点大赛》</option><option value="17">第17集《生日》</option><option value="18">第18集《挑拨》</option><option value="19">第19集《误会》</option><option value="20">第20集《掉马》</option></select><button className="text-btn" onClick={() => copyText(characterPrompt, '角色设定提示词已复制，可在你选择的图片生成工具中制作参考图。')}>复制角色设定提示词 ↗</button></div></div><div className="character-grid"><label>人物大致形象<textarea value={characterNotes} rows={4} onChange={(event) => { setCharacterNotes(event.target.value); markChanged(); }} placeholder="例如：年龄、发型、服装、气质、人物关系" /></label><label>统一画面风格<textarea value={visualStyle} rows={4} onChange={(event) => { setVisualStyle(event.target.value); markChanged(); }} placeholder="例如：电影感写实、光线、色彩、画幅" /></label></div><p className="character-tip">建议先用免费额度或已有工具制作角色正面/半身参考图和场景图，人工挑选满意版本后再复用；本页面只生成提示词，不会实际生成图片。</p></section>
+        <section className="panel character-panel" id="characters"><div className="panel-heading"><div><span className="step">00</span><div><h2>角色与视觉设定</h2><p>先确定可复用的角色描述和背景风格，减少镜头漂移</p></div></div><div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}><select className="ep-select" defaultValue="1" onChange={(e) => void importDemo(Number(e.target.value))} disabled={isLoading} aria-label="选择要导入的集数"><option value="1">第01集《走错桌》</option><option value="2">第02集《领证》</option><option value="3">第03集《搬进来》</option><option value="4">第04集《婚姻协议》</option><option value="5">第05集《念念甜品》</option><option value="6">第06集《她是我妻子》</option><option value="7">第07集《同屋檐下》</option><option value="8">第08集《心动》</option><option value="9">第09集《挡酒》</option><option value="10">第10集《旧伤》</option><option value="11">第11集《曝光危机》</option><option value="12">第12集《云舒窈》</option><option value="13">第13集《同框》</option><option value="14">第14集《霍太太》</option><option value="15">第15集《不示弱》</option><option value="16">第16集《甜点大赛》</option><option value="17">第17集《生日》</option><option value="18">第18集《挑拨》</option><option value="19">第19集《误会》</option><option value="20">第20集《掉马》</option></select><button className="text-btn" onClick={() => copyText(characterPrompt, '角色设定提示词已复制，可在你选择的图片生成工具中制作参考图。')}>复制角色设定提示词 ↗</button></div></div><div className="character-grid"><label>人物大致形象<textarea value={characterNotes} rows={4} onChange={(event) => { setCharacterNotes(event.target.value); markChanged(); }} placeholder="例如：年龄、发型、服装、气质、人物关系" /></label><label>统一画面风格<textarea value={visualStyle} rows={4} onChange={(event) => { setVisualStyle(event.target.value); markChanged(); }} placeholder="例如：电影感写实、光线、色彩、画幅" /></label></div><p className="character-tip">建议先用免费额度或已有工具制作角色正面/半身参考图和场景图，人工挑选满意版本后再复用；本页面只生成提示词，不会实际生成图片。</p>{castList.length > 0 && <div className="cast-manager"><div className="panel-heading"><div><h2 style={{ margin: 0, fontSize: 12 }}>角色定妆图（首帧参考）</h2><p style={{ margin: '4px 0 0', color: 'var(--muted)', fontSize: 10 }}>每个角色做一张定妆图，填 HTTPS 链接；生成视频时自动用对应角色定妆图作首帧，锁住长相。</p></div></div><div className="cast-list">{castList.map((name) => <div className="cast-row" key={name}><div className="cast-name">{name}</div><div className="cast-actions"><button className="text-btn" onClick={() => copyText(characterImagePrompt(name), `${name}定妆图提示词已复制。`)}>复制定妆图提示词</button><input type="url" value={characterImages[name] ?? ''} onChange={(e) => setCharacterImage(name, e.target.value)} placeholder={`${name} 定妆图 HTTPS 链接`} aria-label={`${name}定妆图链接`} /></div></div>)}</div></div>}</section>
 
         <section className="project-bar panel"><div className="project-icon">▶</div><label className="project-name-label">项目名称<input value={projectName} onChange={(event) => { setProjectName(event.target.value); markChanged(); }} aria-label="项目名称" /></label><div className="project-stats"><span><b>{scenes.length}</b> 场景</span><i /><span><b>{shotCount}</b> 镜头</span><i /><span><b>{totalDuration}</b> 秒故事板</span></div><span className={`save-state ${saved ? 'is-saved' : ''}`}>{saved ? '● 已保存' : '○ 未保存'}</span></section>
 
