@@ -69,10 +69,34 @@ export default function Home() {
     finally { setIsLoading(false); }
   };
 
+  const importDemo = async () => {
+    setIsLoading(true); setNotice('');
+    try {
+      const response = await fetch('/demo-ep01.json');
+      if (!response.ok) throw new Error('示例项目加载失败，请确认文件存在。');
+      const demo = await response.json();
+      const loaded = (demo.scenes ?? []).map((scene: Scene) => ({
+        ...scene,
+        shots: (scene.shots ?? []).map((shot: Shot) => ({ ...shot, makeVideo: false })),
+      }));
+      if (!loaded.length) throw new Error('示例项目没有可导入的镜头。');
+      setProjectName(demo.name || '闪婚老公掉马甲·第01集');
+      setScript(demo.script ?? script);
+      setScenes(loaded);
+      setCharacterNotes(demo.characterNotes ?? characterNotes);
+      setVisualStyle(demo.visualStyle ?? visualStyle);
+      setMonthlySpent(demo.monthlySpent ?? 0);
+      setVideoPricePerSecond(demo.videoPricePerSecond ?? 0.6);
+      markChanged();
+      setNotice(`已导入「${demo.name}」：${loaded.length} 个场景、${loaded.reduce((n: number, s: Scene) => n + s.shots.length, 0)} 个镜头。请在分镜区勾选要生成的镜头，再点右下角「去生成视频」。`);
+    } catch (error) { setNotice(error instanceof Error ? error.message : '导入失败。'); }
+    finally { setIsLoading(false); }
+  };
+
   const saveProject = () => {
     const project: Project = { name: projectName, script, scenes, characterNotes, visualStyle, monthlySpent, videoPricePerSecond };
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(project)); setSaved(true); setNotice('项目已保存在当前浏览器。'); }
-    catch { setNotice('浏览器存储空间不足，请先��出项目备份。'); }
+    catch { setNotice('浏览器存储空间不足，请先导出项目备份。'); }
   };
 
   const exportProject = () => {
@@ -114,7 +138,7 @@ export default function Home() {
           <p className="budget-disclaimer">价格仅为你可编辑的估算值（默认 ¥0.60/秒，不代表任何服务商报价）。正式生成前请核对平台实时价格；此处不调用 API、不产生费用。</p>
         </section>
 
-        <section className="panel character-panel" id="characters"><div className="panel-heading"><div><span className="step">00</span><div><h2>角色与视觉设定</h2><p>先确定可复用的角色描述和背景风格，减少镜头漂移</p></div></div><button className="text-btn" onClick={() => copyText(characterPrompt, '角色设定提示词已复制，可在你选择的图片生成工具中制作参考图。')}>复制角色设定提示词 ↗</button></div><div className="character-grid"><label>人物大致形象<textarea value={characterNotes} rows={4} onChange={(event) => { setCharacterNotes(event.target.value); markChanged(); }} placeholder="例如：年龄、发型、服装、气质、人物关系" /></label><label>统一画面风格<textarea value={visualStyle} rows={4} onChange={(event) => { setVisualStyle(event.target.value); markChanged(); }} placeholder="例如：电影感写实、光线、色彩、画幅" /></label></div><p className="character-tip">建议先用免费额度或已有工具制作角色正面/半身参考图和场景图，人工挑选满意版本后再复用；本页面只生成提示词，不会实际生成图片。</p></section>
+        <section className="panel character-panel" id="characters"><div className="panel-heading"><div><span className="step">00</span><div><h2>角色与视觉设定</h2><p>先确定可复用的角色描述和背景风格，减少镜头漂移</p></div></div><div style={{ display: 'flex', gap: 8, alignItems: 'center' }}><button className="secondary-btn" onClick={importDemo} disabled={isLoading}>{isLoading ? '导入中…' : '导入《闪婚老公掉马甲》第01集'}</button><button className="text-btn" onClick={() => copyText(characterPrompt, '角色设定提示词已复制，可在你选择的图片生成工具中制作参考图。')}>复制角色设定提示词 ↗</button></div></div><div className="character-grid"><label>人物大致形象<textarea value={characterNotes} rows={4} onChange={(event) => { setCharacterNotes(event.target.value); markChanged(); }} placeholder="例如：年龄、发型、服装、气质、人物关系" /></label><label>统一画面风格<textarea value={visualStyle} rows={4} onChange={(event) => { setVisualStyle(event.target.value); markChanged(); }} placeholder="例如：电影感写实、光线、色彩、画幅" /></label></div><p className="character-tip">建议先用免费额度或已有工具制作角色正面/半身参考图和场景图，人工挑选满意版本后再复用；本页面只生成提示词，不会实际生成图片。</p></section>
 
         <section className="project-bar panel"><div className="project-icon">▶</div><label className="project-name-label">项目名称<input value={projectName} onChange={(event) => { setProjectName(event.target.value); markChanged(); }} aria-label="项目名称" /></label><div className="project-stats"><span><b>{scenes.length}</b> 场景</span><i /><span><b>{shotCount}</b> 镜头</span><i /><span><b>{totalDuration}</b> 秒故事板</span></div><span className={`save-state ${saved ? 'is-saved' : ''}`}>{saved ? '● 已保存' : '○ 未保存'}</span></section>
 
