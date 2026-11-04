@@ -22,7 +22,7 @@ export default function Home() {
   const [script, setScript] = useState(sampleScript);
   const [scenes, setScenes] = useState<Scene[]>([]);
   const [characterNotes, setCharacterNotes] = useState('女主：年轻女性，黑色长发，米色风衣，手持旧照片。\n男主：年轻男性，深色短发，深蓝色外套，气质克制。');
-  const [visualStyle, setVisualStyle] = useState('电影感写实，柔和自然光，低饱和青蓝色调，细腻情绪，竖屏 9:16');
+  const [visualStyle, setVisualStyle] = useState('电影感真人写实，柔和电影光，自然肤色，电影级调色，细腻情绪');
   const [monthlySpent, setMonthlySpent] = useState(0);
   const [videoPricePerSecond, setVideoPricePerSecond] = useState(0.6);
   const [isLoading, setIsLoading] = useState(false);

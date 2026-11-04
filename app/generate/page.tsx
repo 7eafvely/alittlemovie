@@ -14,7 +14,7 @@ export default function GeneratePage() {
   const [project, setProject] = useState<Project | null>(null);
   const [accessCode, setAccessCode] = useState('');
   const [referenceImage, setReferenceImage] = useState('');
-  const [resolution, setResolution] = useState<'768P' | '1080P'>('768P');
+  const [resolution, setResolution] = useState<'768P' | '1080P'>('1080P');
   const [jobs, setJobs] = useState<VideoJob[]>([]);
   const [busyShot, setBusyShot] = useState('');
   const [message, setMessage] = useState('');
@@ -38,7 +38,22 @@ export default function GeneratePage() {
   const remaining = Math.max(0, 100 - (project?.monthlySpent ?? 0));
   const estimatedTotal = selectedShots.reduce((total, shot) => total + shot.duration * unitPrice, 0);
 
-  const makePrompt = (shot: Shot) => `${shot.description}\n${project?.characterNotes ? `角色外观：${project.characterNotes}\n` : ''}${project?.visualStyle ?? ''}\n竖屏 9:16，保持参考图中人物的脸、发型、服装和整体画风一致。动作自然连贯，避免人物外观变化。`;
+  const makePrompt = (shot: Shot) => {
+    const parts = [
+      shot.description?.trim(),
+      project?.characterNotes?.trim() ? `人物设定：${project.characterNotes.trim()}` : '',
+      project?.visualStyle?.trim() ? `画面风格：${project.visualStyle.trim()}` : '',
+      '镜头语言：[推进] 缓慢推近，电影级浅景深，突出主体，背景自然虚化',
+      '光影色彩：柔和电影主光搭配轮廓光，自然肤色，电影级调色',
+      '画质：超高清，真实皮肤纹理与发丝细节，服装面料真实，细腻胶片质感',
+      `竖屏 9:16，时长 ${shot.duration} 秒`,
+      referenceImage.trim()
+        ? '严格保持首帧参考图中人物的脸型、发型、发色、服装一致，不得改变外貌。'
+        : '保持同一人物的外貌特征贯穿全片，不得改变脸型、发型、服装。',
+      '要求：动作自然流畅、肢体协调，人物表情生动；不得出现多余手指、肢体扭曲、面部崩坏、塑料感、文字、水印、logo',
+    ];
+    return parts.filter(Boolean).join('\n');
+  };
 
   const refreshJob = useCallback(async (job: VideoJob) => {
     try {
@@ -100,7 +115,7 @@ export default function GeneratePage() {
       <label className="form-label">本地访问码<input type="password" autoComplete="current-password" value={accessCode} onChange={(event) => setAccessCode(event.target.value)} placeholder="与 .env.local 中的 ALITTLEMOVIE_ACCESS_CODE 一致" /></label>
       <label className="form-label">角色/场景参考图 HTTPS 链接（可选）<input type="url" value={referenceImage} onChange={(event) => setReferenceImage(event.target.value)} placeholder="https://... 可公开访问的图片地址" /></label>
       <p className="field-note">只支持可被服务商访问的 HTTPS 图片 URL；本页面暂不上传本地图片。没有参考图时将使用纯文字生成，人物一致性会更弱。</p>
-      <label className="form-label">分辨率<select value={resolution} onChange={(event) => setResolution(event.target.value as '768P' | '1080P')}><option value="768P">768P（优先控制成本）</option><option value="1080P">1080P（费用可能更高）</option></select></label>
+      <label className="form-label">分辨率<select value={resolution} onChange={(event) => setResolution(event.target.value as '768P' | '1080P')}><option value="1080P">1080P（画质更好，仅支持 6 秒镜头）</option><option value="768P">768P（6 秒 / 10 秒镜头均可用）</option></select></label>
       <div className="cost-confirm"><input id="cost-ack" type="checkbox" checked={acknowledged} onChange={(event) => setAcknowledged(event.target.checked)} /><label htmlFor="cost-ack">我知道点击生成会调用真实 API 并产生费用；已核对当前模型价格和账户余额。</label></div>
       <div className="generation-budget"><span>可选关键镜头：{selectedShots.length}</span><span>剩余估算预算：¥{remaining.toFixed(2)}</span><span>所选镜头估算：¥{estimatedTotal.toFixed(2)}</span></div>
       <p className="field-note">网页仅按你在工作台填写的估算单价预留预算，不能读取或限制 MiniMax 账户账单。请先核对官方实时价格；任务失败也可能产生费用。生成结果链接可能会过期，请完成后立即下载。</p>
