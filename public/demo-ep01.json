@@ -232,5 +232,10 @@
   "characterNotes": "姜念：25岁年轻女性，黑色长发自然微卷，鹅蛋脸，圆而亮的杏眼，自然妆容，浅杏色连衣裙外搭米白开衫，颈间细银链吊坠，气质温柔清甜\n霍霆深：28岁男性，眉骨高，眼尾微挑，薄唇，下颌线利落，黑色短发，深灰蓝三件套西装白衬衫，身高186cm，冷峻气质\n江秀兰：52岁女性，圆脸慈祥，眼角笑纹，家常碎花针织衫，微微发福",
   "visualStyle": "电影感真人写实，柔和电影光，自然肤色，电影级调色，细腻情绪",
   "monthlySpent": 0,
-  "videoPricePerSecond": 0.6
+  "videoPricePerSecond": 0.6,
+  "characterImages": {
+    "姜念": "https://hailuo-image-algeng-data.oss-cn-wulanchabu.aliyuncs.com/image_inference_output%2Ftalkie%2Fprod%2Fimg%2F2026-11-04%2Fad86a92e-6ffe-4abe-95d3-475797eb705d_aigc.jpeg?Expires=1793870429&OSSAccessKeyId=LTAI5tB2SwrRwAtD23etQUbC&Signature=wgWMrbpitIapzQzS8SbitV9yPck%3D",
+    "霍霆深": "https://hailuo-image-algeng-data.oss-cn-wulanchabu.aliyuncs.com/image_inference_output%2Ftalkie%2Fprod%2Fimg%2F2026-11-04%2F666a90e9-bf40-4e1d-bcf9-cde71f20b99e_aigc.jpeg?Expires=1793870447&OSSAccessKeyId=LTAI5tB2SwrRwAtD23etQUbC&Signature=SZ1riQ5f0KSXpEHn3Fh6HGwMsjA%3D",
+    "江秀兰": "https://hailuo-image-algeng-data.oss-cn-wulanchabu.aliyuncs.com/image_inference_output%2Ftalkie%2Fprod%2Fimg%2F2026-11-04%2F539227cd-c4c3-4494-bbe5-dab00200a807_aigc.jpeg?Expires=1793870480&OSSAccessKeyId=LTAI5tB2SwrRwAtD23etQUbC&Signature=1aMiuIlX%2FADNF3YO3ocqM0%2BQlEc%3D"
+  }
 }
